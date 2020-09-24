@@ -1,6 +1,9 @@
 mod hack_util;
 
 use std::str;
+use std::thread;
+
+const GAMEASSEMBLY_OFFSET: u32 = 0x55660000;
 
 const NAMES: [&str; 10] = [
     "Panic disable all hax",
@@ -17,10 +20,14 @@ const NAMES: [&str; 10] = [
 
 fn main() {
     let process = hack_util::attach("Among Us.exe");
-    let _module = hack_util::Module::get_module("Among Us.exe", "Among Us.exe");
+    if process.m_h_process as u32 == 0 {
+        println!("Couldn't find the among us process D:");
+        std::process::exit(1);
+    }
+    let _module = hack_util::Module::get_module("Among Us.exe", "Among Us.exe"); //For some reason it only lists the last 5 processes not sure why
 
-    //let player_control_ptr = process.pointer_from_offsets(0, vec![0x5d2a0000, 0x5C, 0x0]);
-    //let game_options_data_ptr = process.pointer_from_offsets(0, vec![0x5d2a0000, 0x5C, 0x4]);
+    //let player_control_ptr = process.pointer_from_offsets(0, vec![gameaseembly_offset, 0x5C, 0x0]);
+    //let game_options_data_ptr = process.pointer_from_offsets(0, vec![gameaseembly_offset, 0x5C, 0x4]);
 
     let mut was_done: [bool; 10] = [false; 10];
     let mut ogspeed: f32 = 1.0;
@@ -43,9 +50,10 @@ fn main() {
                     match x {
                         0 => {
                             speed = false;
-                            let speed_ptr = process
-                                .pointer_from_offsets(0x5d2a0000, vec![0xDA3C30, 0x5C, 0x14])
-                                + 0x14;
+                            let speed_ptr = process.pointer_from_offsets(
+                                GAMEASSEMBLY_OFFSET,
+                                vec![0xDA3C30, 0x5C, 0x14],
+                            ) + 0x14;
                             process.write_memory::<f32>(speed_ptr, ogspeed);
                             cooldown = false;
                             range = false;
@@ -58,9 +66,10 @@ fn main() {
                         1 => other = !other,
                         //Blatant speed hack (2x)
                         2 => {
-                            let speed_ptr = process
-                                .pointer_from_offsets(0x5d2a0000, vec![0xDA3C30, 0x5C, 0x14])
-                                + 0x14;
+                            let speed_ptr = process.pointer_from_offsets(
+                                GAMEASSEMBLY_OFFSET,
+                                vec![0xDA3C30, 0x5C, 0x14],
+                            ) + 0x14;
                             if !speed {
                                 ogspeed = process.read_memory::<f32>(speed_ptr);
                                 process.write_memory::<f32>(speed_ptr, 4.0)
@@ -97,12 +106,12 @@ fn main() {
 
         if cooldown {
             let kill_cooldown_ptr =
-                process.pointer_from_offsets(0x5d2a0000, vec![0xDA5A84, 0x5C, 0x0]) + 0x44;
+                process.pointer_from_offsets(GAMEASSEMBLY_OFFSET, vec![0xDA5A84, 0x5C, 0x0]) + 0x44;
             process.write_memory::<f32>(kill_cooldown_ptr, 0.0);
         }
 
         let kill_range_ptr =
-            process.pointer_from_offsets(0x5d2a0000, vec![0xDA5A84, 0x5C, 0x4]) + 0x40;
+            process.pointer_from_offsets(GAMEASSEMBLY_OFFSET, vec![0xDA5A84, 0x5C, 0x4]) + 0x40;
         if range {
             process.write_memory::<u32>(kill_range_ptr, 2);
         } else {
@@ -111,16 +120,17 @@ fn main() {
 
         if vent {
             let vent_move_ptr =
-                process.pointer_from_offsets(0x5d2a0000, vec![0xDA5A84, 0x5C, 0x0]) + 0x30;
+                process.pointer_from_offsets(GAMEASSEMBLY_OFFSET, vec![0xDA5A84, 0x5C, 0x0]) + 0x30;
             let in_vent_ptr =
-                process.pointer_from_offsets(0x5d2a0000, vec![0xDA5A84, 0x5C, 0x0]) + 0x31;
+                process.pointer_from_offsets(GAMEASSEMBLY_OFFSET, vec![0xDA5A84, 0x5C, 0x0]) + 0x31;
             if process.read_memory::<u8>(in_vent_ptr) == 1 {
                 process.write_memory::<u8>(vent_move_ptr, 2);
             }
         }
 
-        let player_imposter_ptr =
-            process.pointer_from_offsets(0x5d2a0000, vec![0xDA5A84, 0x5C, 0x0, 0x34]) + 0x28;
+        let player_imposter_ptr = process
+            .pointer_from_offsets(GAMEASSEMBLY_OFFSET, vec![0xDA5A84, 0x5C, 0x0, 0x34])
+            + 0x28;
 
         if imposter {
             process.write_memory::<u8>(player_imposter_ptr, 1);
@@ -128,14 +138,16 @@ fn main() {
             process.write_memory::<u8>(player_imposter_ptr, 0);
         }
 
-        let vision_radius_ptr =
-            process.pointer_from_offsets(0x5d2a0000, vec![0xDA5A84, 0x5C, 0x0, 0x54]) + 0x1C;
+        let vision_radius_ptr = process
+            .pointer_from_offsets(GAMEASSEMBLY_OFFSET, vec![0xDA5A84, 0x5C, 0x0, 0x54])
+            + 0x1C;
 
         if fullbright {
             process.write_memory::<f32>(vision_radius_ptr, 20.0);
         } else {
             process.write_memory::<f32>(vision_radius_ptr, 5.0);
         }
+        thread::sleep_ms(20);
     }
 }
 
@@ -144,11 +156,11 @@ fn main() {
 fn imposters(process: &hack_util::Process) {
     for i in 1..9 {
         let player_imposter_ptr = process.pointer_from_offsets(
-            0x5d2a0000,
+            GAMEASSEMBLY_OFFSET,
             vec![0xDA5A84, 0x5C, 0x0, 0x24, 0x8, 0x10 + (0x4 * i)],
         ) + 0x28;
         let player_name_ptr = process.pointer_from_offsets(
-            0x5d2a0000,
+            GAMEASSEMBLY_OFFSET,
             vec![0xDA5A84, 0x5C, 0x0, 0x24, 0x8, 0x10 + (0x4 * i), 0xC],
         ) + 0xC;
 
@@ -170,11 +182,11 @@ fn dead(process: &hack_util::Process) {
 
     for i in 1..9 {
         let player_dead_ptr = process.pointer_from_offsets(
-            0x5d2a0000,
+            GAMEASSEMBLY_OFFSET,
             vec![0xDA5A84, 0x5C, 0x0, 0x24, 0x8, 0x10 + (0x4 * i)],
         ) + 0x29;
         let player_name_ptr = process.pointer_from_offsets(
-            0x5d2a0000,
+            GAMEASSEMBLY_OFFSET,
             vec![0xDA5A84, 0x5C, 0x0, 0x24, 0x8, 0x10 + (0x4 * i), 0xC],
         ) + 0xC;
 

@@ -3,7 +3,7 @@ use std::ptr;
 
 #[derive(Clone, Copy)]
 pub struct Process {
-    m_h_process: winapi::um::winnt::HANDLE,
+    pub m_h_process: winapi::um::winnt::HANDLE,
 }
 
 pub struct Module {
@@ -74,6 +74,7 @@ impl Module {
 
             while unsafe { winapi::um::tlhelp32::Module32NextW(h_module, &mut entry) } != 0 {
                 let module_name = String::from_utf16_lossy(&entry.szModule);
+                println!("{}", module_name);
                 if module_name.contains(target_module_name) {
                     unsafe { winapi::um::handleapi::CloseHandle(h_module) };
 

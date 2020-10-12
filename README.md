@@ -1,7 +1,5 @@
-# Simple way to edit memory with rust
+# Among us mod
  
-Simple base I use to get a handle to a process and write to its memory. It can also get what keys are being pressed.
-
 Written all in rust.
 
  

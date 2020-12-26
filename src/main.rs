@@ -3,7 +3,7 @@ mod hack_util;
 use std::str;
 use std::thread;
 
-const GAMEASSEMBLY_OFFSET: u32 = 0x55660000;
+const GAMEASSEMBLY_OFFSET: u64 = 0x55660000;
 
 const NAMES: [&str; 10] = [
     "Panic disable all hax",
@@ -24,7 +24,7 @@ fn main() {
         println!("Couldn't find the among us process D:");
         std::process::exit(1);
     }
-    let _module = hack_util::Module::get_module("Among Us.exe", "Among Us.exe"); //For some reason it only lists the last 5 processes not sure why
+    let _module = hack_util::Module::get_module("Among Us.exe", "GameAssembly.dll"); //For some reason it only lists the last 5 processes not sure why
 
     //let player_control_ptr = process.pointer_from_offsets(0, vec![gameaseembly_offset, 0x5C, 0x0]);
     //let game_options_data_ptr = process.pointer_from_offsets(0, vec![gameaseembly_offset, 0x5C, 0x4]);
